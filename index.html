@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Fremon Radio</title>
+  <meta name="theme-color" content="#0f2430">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@800&family=Manrope:wght@400;600&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0f2430;
+      --panel: #173646;
+      --lamp: #f5b83d;
+      --lamp-on: #ffb020;
+      --text: #eaf0f2;
+      --muted: #8fa7b3;
+      --ring: rgba(245, 184, 61, .4);
+      --ring-outer: rgba(245, 184, 61, .16);
+    }
+
+    :root.light {
+      --bg: #e8eef1;
+      --panel: #ffffff;
+      --lamp: #e8a51a;
+      --lamp-on: #f0a800;
+      --text: #0f2430;
+      --muted: #5c7482;
+      --ring: rgba(232, 165, 26, .5);
+      --ring-outer: rgba(232, 165, 26, .2);
+    }
+
+    * {
+      box-sizing: border-box
+    }
+
+    html,
+    body {
+      min-height: 100%;
+      margin: 0
+    }
+
+    body {
+      background: radial-gradient(120% 80% at 50% 0%, #1b4256 0%, var(--bg) 62%);
+      color: var(--text);
+      font-family: Manrope, system-ui, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      min-height: 100vh;
+      transition: background .4s ease, color .4s ease;
+    }
+
+    :root.light body {
+      background: radial-gradient(120% 80% at 50% 0%, #f5f9fb 0%, var(--bg) 62%)
+    }
+
+    main {
+      width: 100%;
+      max-width: 420px;
+      text-align: center
+    }
+
+    h1 {
+      font-family: Syne, system-ui, sans-serif;
+      font-weight: 800;
+      font-size: clamp(2rem, 9vw, 2.9rem);
+      margin: 0 0 .5rem;
+      letter-spacing: -.02em;
+      line-height: 1;
+    }
+
+    .estado {
+      display: inline-flex;
+      align-items: center;
+      gap: .5rem;
+      color: var(--muted);
+      font-size: .95rem;
+      min-height: 1.3rem
+    }
+
+    .estado i {
+      width: .55rem;
+      height: .55rem;
+      border-radius: 50%;
+      background: var(--muted);
+      transition: background .3s ease;
+    }
+
+    .on .estado i {
+      background: #ff5a4f;
+      animation: latido 1.6s infinite
+    }
+
+    .estado .spinner {
+      width: .7rem;
+      height: .7rem;
+      border-radius: 50%;
+      border: 2px solid var(--muted);
+      border-top-color: transparent;
+      animation: giro .8s linear infinite;
+      display: none;
+    }
+
+    .conectando .estado i {
+      display: none
+    }
+
+    .conectando .estado .spinner {
+      display: inline-block
+    }
+
+    .dial {
+      position: relative;
+      width: min(68vw, 260px);
+      aspect-ratio: 1;
+      margin: 2.5rem auto 2rem;
+      display: grid;
+      place-items: center;
+    }
+
+    .dial::before,
+    .dial::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      border: 1px solid var(--ring);
+      transition: border-color .5s ease;
+    }
+
+    .dial::after {
+      inset: -13%;
+      border-color: var(--ring-outer)
+    }
+
+    .on .dial::before {
+      animation: onda 2.6s ease-out infinite
+    }
+
+    /* Dial girando: la "aguja" gira lentamente cuando suena */
+    .dial .aguja {
+      position: absolute;
+      inset: -6%;
+      border-radius: 50%;
+      pointer-events: none;
+      transition: opacity .4s ease;
+      opacity: 0;
+    }
+
+    .dial .aguja::after {
+      content: "";
+      position: absolute;
+      top: 2%;
+      left: calc(50% - 1.5px);
+      width: 3px;
+      height: 14%;
+      background: var(--lamp);
+      border-radius: 3px;
+      box-shadow: 0 0 10px var(--lamp);
+      transform-origin: 50% 340%;
+    }
+
+    .on .dial .aguja {
+      opacity: 1;
+      animation: aguja 12s linear infinite;
+    }
+
+    #play {
+      width: 64%;
+      aspect-ratio: 1;
+      border: 0;
+      border-radius: 50%;
+      background: var(--lamp);
+      color: #241a05;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      box-shadow: 0 0 50px rgba(245, 184, 61, .35);
+      transition: transform .15s, box-shadow .4s, background .5s;
+      position: relative;
+      z-index: 1;
+    }
+
+    #play:hover {
+      transform: scale(1.04)
+    }
+
+    #play:active {
+      transform: scale(.97)
+    }
+
+    #play:focus-visible {
+      outline: 3px solid var(--text);
+      outline-offset: 6px
+    }
+
+    #play svg {
+      width: 42%;
+      height: 42%;
+      fill: currentColor
+    }
+
+    .on #play {
+      background: var(--lamp-on);
+      box-shadow: 0 0 70px rgba(255, 176, 32, .55);
+    }
+
+    .on #icono-play,
+    #icono-pausa {
+      display: none
+    }
+
+    .on #icono-pausa {
+      display: block
+    }
+
+    .eq {
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+      gap: 5px;
+      height: 26px;
+      margin-bottom: 1rem;
+    }
+
+    .eq span {
+      width: 5px;
+      height: 100%;
+      background: var(--lamp);
+      border-radius: 2px;
+      transform: scaleY(.15);
+      transform-origin: bottom;
+      transition: background .5s;
+    }
+
+    .on .eq span {
+      animation: barra 1s ease-in-out infinite
+    }
+
+    .eq span:nth-child(2) {
+      animation-delay: .2s !important
+    }
+
+    .eq span:nth-child(3) {
+      animation-delay: .45s !important
+    }
+
+    .eq span:nth-child(4) {
+      animation-delay: .1s !important
+    }
+
+    .eq span:nth-child(5) {
+      animation-delay: .35s !important
+    }
+
+    .etiqueta {
+      color: var(--muted);
+      font-size: .9rem;
+      margin: 0 0 .3rem
+    }
+
+    #titulo {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin: 0 auto 1.2rem;
+      max-width: 34ch;
+      line-height: 1.35;
+      overflow-wrap: anywhere;
+    }
+
+    #desde {
+      color: var(--muted);
+      font-size: .85rem;
+      margin: 0 0 1.5rem;
+      min-height: 1.1rem;
+    }
+
+    .vol {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: .75rem;
+      color: var(--muted);
+      margin-bottom: 1rem;
+    }
+
+    .vol svg {
+      width: 20px;
+      height: 20px;
+      fill: currentColor
+    }
+
+    #vol {
+      width: 100%;
+      max-width: 200px;
+      accent-color: var(--lamp)
+    }
+
+    .compartir {
+      background: transparent;
+      border: 1px solid var(--ring);
+      color: var(--text);
+      padding: .6rem 1.2rem;
+      border-radius: 999px;
+      font-family: inherit;
+      font-size: .9rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: .5rem;
+      transition: background .2s, border-color .2s, transform .15s;
+    }
+
+    .compartir:hover {
+      background: rgba(245, 184, 61, .1);
+      border-color: var(--lamp)
+    }
+
+    .compartir:active {
+      transform: scale(.97)
+    }
+
+    .compartir svg {
+      width: 16px;
+      height: 16px;
+      fill: currentColor
+    }
+
+    @keyframes latido {
+
+      0%,
+      100% {
+        opacity: 1
+      }
+
+      50% {
+        opacity: .3
+      }
+    }
+
+    @keyframes onda {
+      from {
+        transform: scale(1);
+        opacity: 1
+      }
+
+      to {
+        transform: scale(1.3);
+        opacity: 0
+      }
+    }
+
+    @keyframes barra {
+
+      0%,
+      100% {
+        transform: scaleY(.2)
+      }
+
+      50% {
+        transform: scaleY(1)
+      }
+    }
+
+    @keyframes giro {
+      to {
+        transform: rotate(360deg)
+      }
+    }
+
+    @keyframes aguja {
+      to {
+        transform: rotate(360deg)
+      }
+    }
+
+    @media (prefers-reduced-motion:reduce) {
+      * {
+        animation: none !important;
+        transition: none !important
+      }
+
+      .on .dial .aguja {
+        opacity: 0
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main id="app">
+    <h1>Fremon Radio</h1>
+    <div class="estado">
+      <i></i>
+      <span class="spinner" aria-hidden="true"></span>
+      <span id="estado">Listo para reproducir</span>
+    </div>
+
+    <div class="dial">
+      <div class="aguja" aria-hidden="true"></div>
+      <button id="play" aria-label="Reproducir">
+        <svg id="icono-play" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M7 4.5v15l13-7.5z" />
+        </svg>
+        <svg id="icono-pausa" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M6 4h4v16H6zM14 4h4v16h-4z" />
+        </svg>
+      </button>
+    </div>
+
+    <div class="eq" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div>
+
+    <p class="etiqueta">Sonando ahora</p>
+    <p id="titulo" aria-live="polite">Fremon Radio — En directo</p>
+    <p id="desde"></p>
+
+    <label class="vol">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M3 9v6h4l5 4V5L7 9zm13.5 3a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4z" />
+      </svg>
+      <span style="position:absolute;left:-9999px">Volumen</span>
+      <input id="vol" type="range" min="0" max="1" step="0.01" value="0.8">
+    </label>
+
+    <button class="compartir" id="compartir" type="button">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path
+          d="M18 16.08a2.9 2.9 0 0 0-1.96.77L8.9 12.7a2.9 2.9 0 0 0 0-1.4l7.05-4.11A3 3 0 1 0 15 5a2.9 2.9 0 0 0 .06.6L8.1 9.71a3 3 0 1 0 0 4.58l7.02 4.12A3 3 0 1 0 18 16.08z" />
+      </svg>
+      Compartir
+    </button>
+  </main>
+
+  <script>
+    // ======== CONFIGURACIÓN ========
+    const STREAM = "https://uk4freenew.listen2myradio.com/live.mp3?typeportmount=s1_6885_stream_980181954";
+    const NOMBRE = "Fremon Radio";
+    // ===============================
+
+    const app = document.getElementById("app");
+    const btn = document.getElementById("play");
+    const estado = document.getElementById("estado");
+    const titulo = document.getElementById("titulo");
+    const desde = document.getElementById("desde");
+    const vol = document.getElementById("vol");
+    const btnCompartir = document.getElementById("compartir");
+
+    // ======== TEMA CLARO/OSCURO ========
+    const media = window.matchMedia("(prefers-color-scheme: light)");
+    const aplicarTema = () => document.documentElement.classList.toggle("light", media.matches);
+    aplicarTema();
+    media.addEventListener?.("change", aplicarTema);
+
+    // ======== VOLUMEN PERSISTENTE ========
+    const volGuardado = localStorage.getItem("volumen");
+    if (volGuardado !== null) vol.value = volGuardado;
+
+    const audio = new Audio();
+    audio.preload = "metadata";
+    audio.volume = parseFloat(vol.value);
+
+    let reintentos = 0;
+    let horaInicio = null;
+    let intervaloTitulo = null;
+
+    // ======== PLAY / PAUSA ========
+    btn.addEventListener("click", () => {
+      if (audio.paused) {
+        conectar();
+      } else {
+        audio.pause();
+        audio.removeAttribute("src");
+        audio.load();
+        reintentos = 0;
+      }
+    });
+
+    function conectar() {
+      app.classList.add("conectando");
+      estado.textContent = "Conectando…";
+      audio.src = STREAM;
+      audio.play().catch(() => {
+        app.classList.remove("conectando");
+        estado.textContent = "Toca para reintentar";
+      });
+    }
+
+    // ======== EVENTOS DEL AUDIO ========
+    audio.addEventListener("playing", () => {
+      app.classList.add("on");
+      app.classList.remove("conectando");
+      btn.setAttribute("aria-label", "Pausar");
+      estado.textContent = "En vivo";
+      titulo.textContent = NOMBRE + " — En directo";
+      reintentos = 0;
+
+      if (!horaInicio) {
+        horaInicio = new Date();
+        desde.textContent = "Escuchando desde las " + horaInicio.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
+      }
+
+      if ("mediaSession" in navigator) {
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: NOMBRE,
+          artist: "Radio en directo",
+        });
+        navigator.mediaSession.playbackState = "playing";
+      }
+
+      // Título animado en la pestaña
+      clearInterval(intervaloTitulo);
+      let puntos = 0;
+      intervaloTitulo = setInterval(() => {
+        puntos = (puntos + 1) % 4;
+        document.title = "▶ " + NOMBRE + " " + ".".repeat(puntos);
+      }, 600);
+    });
+
+    audio.addEventListener("pause", () => {
+      app.classList.remove("on");
+      btn.setAttribute("aria-label", "Reproducir");
+      estado.textContent = "Listo para reproducir";
+      desde.textContent = "";
+      horaInicio = null;
+      clearInterval(intervaloTitulo);
+      document.title = NOMBRE;
+      if ("mediaSession" in navigator) navigator.mediaSession.playbackState = "paused";
+    });
+
+    audio.addEventListener("error", () => {
+      if (!audio.getAttribute("src")) return;
+      // Reintento automático hasta 3 veces
+      if (reintentos < 3 && !audio.paused) {
+        reintentos++;
+        estado.textContent = `Reconectando… (${reintentos}/3)`;
+        setTimeout(() => {
+          audio.src = STREAM;
+          audio.play().catch(() => { });
+        }, 1500 * reintentos);
+      } else {
+        app.classList.remove("on");
+        app.classList.remove("conectando");
+        estado.textContent = "Sin conexión con la radio";
+      }
+    });
+
+    // ======== VOLUMEN ========
+    vol.addEventListener("input", () => {
+      audio.volume = vol.value;
+      localStorage.setItem("volumen", vol.value);
+    });
+
+    // ======== COMPARTIR ========
+    btnCompartir.addEventListener("click", async () => {
+      const datos = {
+        title: NOMBRE,
+        text: "Escucha " + NOMBRE + " en directo",
+        url: location.href,
+      };
+      try {
+        if (navigator.share) {
+          await navigator.share(datos);
+        } else {
+          await navigator.clipboard.writeText(location.href);
+          const original = btnCompartir.innerHTML;
+          btnCompartir.textContent = "¡Enlace copiado!";
+          setTimeout(() => { btnCompartir.innerHTML = original; }, 1800);
+        }
+      } catch (e) { /* usuario canceló */ }
+    });
+
+    // ======== MEDIA SESSION (controles del sistema) ========
+    if ("mediaSession" in navigator) {
+      navigator.mediaSession.setActionHandler("play", () => conectar());
+      navigator.mediaSession.setActionHandler("pause", () => {
+        audio.pause();
+        audio.removeAttribute("src");
+        audio.load();
+      });
+    }
+  </script>
+</body>
+
+</html>
